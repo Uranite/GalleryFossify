@@ -552,6 +552,9 @@ class PhotoFragment : ViewPagerFragment() {
                     dataSource: DataSource,
                     isFirstResource: Boolean
                 ): Boolean {
+                    if (resource is BitmapDrawable) {
+                        resource.paint.isFilterBitmap = false
+                    }
                     applyProperColorMode(resource)
                     val allowZoomingImages = context?.config?.allowZoomingImages ?: true
                     binding.gesturesView.controller.settings.isZoomEnabled = mMedium.isRaw() || mCurrentRotationDegrees != 0 || allowZoomingImages == false
@@ -582,6 +585,10 @@ class PhotoFragment : ViewPagerFragment() {
 
             picasso.into(binding.gesturesView, object : Callback {
                 override fun onSuccess() {
+                    val drawable = binding.gesturesView.drawable
+                    if (drawable is BitmapDrawable) {
+                        drawable.paint.isFilterBitmap = false
+                    }
                     applyProperColorMode(binding.gesturesView.drawable)
                     binding.gesturesView.controller.settings.isZoomEnabled =
                         mMedium.isRaw() || mCurrentRotationDegrees != 0 || context?.config?.allowZoomingImages == false
@@ -755,7 +762,7 @@ class PhotoFragment : ViewPagerFragment() {
             background = ColorDrawable(Color.TRANSPARENT)
             bitmapDecoderFactory = bitmapDecoder
             regionDecoderFactory = regionDecoder
-            maxScale = 10f
+            maxScale = 200f
             beVisible()
             rotationEnabled = config.allowRotatingWithGestures
             isOneToOneZoomEnabled = config.allowOneToOneZoom
@@ -775,6 +782,15 @@ class PhotoFragment : ViewPagerFragment() {
                     val useWidth = if (mImageOrientation == ORIENTATION_ROTATE_90 || mImageOrientation == ORIENTATION_ROTATE_270) sHeight else sWidth
                     val useHeight = if (mImageOrientation == ORIENTATION_ROTATE_90 || mImageOrientation == ORIENTATION_ROTATE_270) sWidth else sHeight
                     doubleTapZoomScale = getDoubleTapZoomScale(useWidth, useHeight)
+
+                    try {
+                        val field = SubsamplingScaleImageView::class.java.getDeclaredField("bitmapPaint")
+                        field.isAccessible = true
+                        val paint = field.get(this@apply) as android.graphics.Paint
+                        paint.isFilterBitmap = false
+                        paint.isDither = false
+                    } catch (ignored: Exception) {
+                    }
                 }
 
                 override fun onImageLoadError(e: Exception) {
